@@ -1,29 +1,41 @@
-from flask import Flask, render_template
 import requests
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Replace with your weather API URL
-WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
+# Replace with your API key
+API_KEY = 'b9fbe65155e64b90fce6dee912c4a9b1'
 
-# Replace with your OpenWeatherMap API key
-API_KEY = "d0eff8ebebd5c7b7cba5635389a1c486"
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    city = "New York"  # Replace with the city you want to get weather for
-    weather_data = get_weather(city)
-    return render_template('index.html', weather=weather_data)
+    city = None
+    weather = None
+
+    if request.method == 'POST':
+        city = request.form.get('city')
+        if city:
+            weather = get_weather(city)
+
+    return render_template('index.html', city=city, weather=weather)
 
 def get_weather(city):
-    url = WEATHER_API_URL.format(city=city, api_key=API_KEY)
+    url = f'http://api.weatherapi.com/v1/forecast.json?key={API_KEY}&q={city}&days=1&hour=6'
     response = requests.get(url)
     data = response.json()
-    weather = {
-        'temperature': data['main']['temp'],
-        'description': data['weather'][0]['description']
-    }
-    return weather
+    
+    forecasts = []
+    if 'forecast' in data and 'forecastday' in data['forecast'] and data['forecast']['forecastday']:
+        for forecast in data['forecast']['forecastday'][0]['hour']:
+            forecasts.append({
+                'time': forecast['time'],
+                'temp': forecast['temp_c'],
+                'condition': forecast['condition']['text']
+            })
+    
+    return forecasts[:6]  # Return the next six hours' forecast
+
+# ... rest of your code ...
+
 
 if __name__ == '__main__':
     app.run(debug=True)
